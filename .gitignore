@@ -1,0 +1,8 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+*.log
+
+# Payday 2 mod local data
+mod_save/
+save/
