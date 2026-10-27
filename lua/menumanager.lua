@@ -56,7 +56,6 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusMissedShots
         refresh(false)
     end
 
-    -- per-weapon table
     function MenuCallbackHandler:callback_missed_shots_tracker_table_x(item)
         settings.table_x = item:value()
         refresh(false)
@@ -87,7 +86,6 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusMissedShots
         refresh(false)
     end
 
-    -- background
     function MenuCallbackHandler:callback_missed_shots_tracker_bg(item)
         settings.bg = item:value() == "on"
         refresh(false)
@@ -98,7 +96,6 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusMissedShots
         refresh(false)
     end
 
-    -- font
     function MenuCallbackHandler:callback_missed_shots_tracker_font_size(item)
         settings.font_size = item:value()
         refresh(true)
@@ -118,6 +115,8 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusMissedShots
         settings.text_color = item:value()
         refresh(true)
     end
+
+
 
     function MenuCallbackHandler:callback_missed_shots_tracker_reset(item)
         -- write into the shared table; rebinding the local would not reset anything
@@ -218,6 +217,8 @@ Hooks:Add("MenuManagerBuildCustomMenus", "MenuManagerBuildCustomMenusMissedShots
         menu_id = main_menu_id,
         priority = 17
     })
+
+
 
     MenuHelper:AddToggle({
         id = "missed_shots_tracker_show_counter",

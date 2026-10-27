@@ -6,3 +6,7 @@ Thumbs.db
 # Payday 2 mod local data
 mod_save/
 save/
+
+# Tooling / local artifacts
+.opencode/
+search-*.json

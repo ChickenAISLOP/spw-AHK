@@ -58,34 +58,25 @@ if not MissedShotsTracker then
 		MissedShotsTracker.font_pack_items[i] = pack.loc
 	end
 
-	-- Font helpers ---------------------------------------------------------
 	-- The pack fonts are added by main.xml (BeardLib). If BeardLib is missing,
 	-- or the game does not know a font, the default font is used instead.
 
 	function MissedShotsTracker:font_exists(path)
-		local ok, found = pcall(function()
-			return DB:has(Idstring("font"), Idstring(path))
-		end)
-		return ok and found == true
+		return DB:has(Idstring("font"), Idstring(path)) == true
 	end
 
-	-- Asks the game to load the font if it is not loaded yet; true when it is ready.
 	function MissedShotsTracker:font_ready(path)
-		local ok, ready = pcall(function()
-			local dyn = managers.dyn_resource
-			if not dyn then return false end
-			local ids_font, ids_path = Idstring("font"), Idstring(path)
-			local package = DynamicResourceManager.DYN_RESOURCES_PACKAGE
-			if dyn:is_resource_ready(ids_font, ids_path, package) then
-				return true
-			end
-			dyn:load(ids_font, ids_path, package, nil)
-			return dyn:is_resource_ready(ids_font, ids_path, package)
-		end)
-		return ok and ready == true
+		local dyn = managers.dyn_resource
+		if not dyn then return false end
+		local ids_font, ids_path = Idstring("font"), Idstring(path)
+		local package = DynamicResourceManager.DYN_RESOURCES_PACKAGE
+		if dyn:is_resource_ready(ids_font, ids_path, package) then
+			return true
+		end
+		dyn:load(ids_font, ids_path, package, nil)
+		return dyn:is_resource_ready(ids_font, ids_path, package)
 	end
 
-	-- Path of the font selected in the menu (FONT + FONT STYLE).
 	function MissedShotsTracker:get_font()
 		local settings = self.settings
 		local fallback = self.font_packs[1].fonts[1]
@@ -109,21 +100,19 @@ if not MissedShotsTracker then
 		target_damage = 0 -- damage dealt to that enemy so far
 	}
 
-	-- Weapon id helpers ----------------------------------------------------
-
 	function MissedShotsTracker:weapon_id(data)
 		if not data then return nil end
 		-- prefer the weapon unit; "name_id" is only a fallback
 		local unit = data.weapon_unit
 		if unit and alive(unit) then
-			local ok, id = pcall(function()
-				local base = unit:base()
-				if base.get_name_id then
-					return base:get_name_id()
-				end
-				return base._name_id or base.name_id
-			end)
-			if ok and type(id) == "string" then
+			local base = unit:base()
+			local id
+			if base.get_name_id then
+				id = base:get_name_id()
+			else
+				id = base._name_id or base.name_id
+			end
+			if type(id) == "string" then
 				return id
 			end
 		end
@@ -133,8 +122,6 @@ if not MissedShotsTracker then
 		return nil
 	end
 
-	-- Weapon type words removed from names when "show weapon type" is off
-	-- (English names; longer phrases first).
 	local TYPE_WORDS = {
 		"light machine gun", "submachine gun", "sub-machine gun", "machine gun",
 		"assault rifle", "battle rifle", "sniper rifle", "marksman rifle",
@@ -172,14 +159,13 @@ if not MissedShotsTracker then
 	end
 
 	function MissedShotsTracker:weapon_name(id)
-		local ok, name = pcall(function()
-			local tweak = tweak_data.weapon[id]
-			local name_id = tweak and tweak.name_id
-			if name_id and managers.localization:exists(name_id) then
-				return managers.localization:text(name_id)
-			end
-		end)
-		if not (ok and type(name) == "string") then
+		local name
+		local tweak = tweak_data.weapon[id]
+		local name_id = tweak and tweak.name_id
+		if name_id and managers.localization:exists(name_id) then
+			name = managers.localization:text(name_id)
+		end
+		if type(name) ~= "string" then
 			name = id
 		end
 		if self.settings.show_type ~= true then
@@ -199,28 +185,23 @@ if not MissedShotsTracker then
 		return w
 	end
 
-	-- Id of the weapon the local player is holding (nil if unknown).
 	function MissedShotsTracker:equipped_weapon_id(inventory)
 		local id
-		pcall(function()
-			if not inventory then
-				local player = managers.player and managers.player:player_unit()
-				if not alive(player) then return end
-				inventory = player:inventory()
-			end
-			id = self:weapon_id({ weapon_unit = inventory:equipped_unit() })
-			if not id then
-				-- fallback: look the weapon up through the loadout
-				local bm = managers.blackmarket
-				local slot = inventory:equipped_selection() == 2 and bm:equipped_primary() or bm:equipped_secondary()
-				id = slot and slot.weapon_id
-			end
-		end)
+		if not inventory then
+			local player = managers.player and managers.player:player_unit()
+			if not alive(player) then return nil end
+			inventory = player:inventory()
+		end
+		id = self:weapon_id({ weapon_unit = inventory:equipped_unit() })
+		if not id then
+			-- fallback: look the weapon up through the loadout
+			local bm = managers.blackmarket
+			local slot = inventory:equipped_selection() == 2 and bm:equipped_primary() or bm:equipped_secondary()
+			id = slot and slot.weapon_id
+		end
 		return id
 	end
 
-	-- Adds the equipped weapon to the table (0 kills, 0/0) so it shows up
-	-- before the first shot, and makes it the one the table displays.
 	function MissedShotsTracker:register_equipped(inventory)
 		local id = self:equipped_weapon_id(inventory)
 		if not (id and tweak_data.weapon and tweak_data.weapon[id]) then return end
@@ -251,9 +232,6 @@ if not MissedShotsTracker then
 		self:register_equipped()
 	end
 
-	-- Called after every shot with the game's own session totals. The
-	-- change since the last call is attributed to the weapon that fired,
-	-- so we follow the game's counting rules (shotgun pellets etc.).
 	function MissedShotsTracker:record_shot(data, total, hits)
 		local values = self.values
 		local d_total = total - values.last_total
@@ -276,55 +254,52 @@ if not MissedShotsTracker then
 		w.hits = w.hits + d_hits
 	end
 
-	-- Damage dealt by the local player's weapons. Hooked in two places
-	-- (PlayerManager and CopDamage); each hit is only counted once.
 	local seen_hits = setmetatable({}, { __mode = "k" })
 
 	function MissedShotsTracker:record_damage(attack_data, victim)
-		pcall(function()
-			if type(attack_data) ~= "table" or seen_hits[attack_data] then return end
-			local player = managers.player and managers.player:player_unit()
-			if not alive(player) or attack_data.attacker_unit ~= player then return end
-			if attack_data.variant == "melee" then return end
+		if type(attack_data) ~= "table" or seen_hits[attack_data] then return end
+		local player = managers.player and managers.player:player_unit()
+		if not alive(player) or attack_data.attacker_unit ~= player then return end
+		if attack_data.variant == "melee" then return end
 
-			local id = self:weapon_id({ weapon_unit = attack_data.weapon_unit })
-			local dmg = tonumber(attack_data.damage)
-			if not id or not (tweak_data.weapon and tweak_data.weapon[id]) or not dmg or dmg <= 0 then return end
+		local id = self:weapon_id({ weapon_unit = attack_data.weapon_unit })
+		local dmg = tonumber(attack_data.damage)
+		if not id or not (tweak_data.weapon and tweak_data.weapon[id]) or not dmg or dmg <= 0 then return end
 
-			seen_hits[attack_data] = true
-			local wpn = self:get_weapon(id)
-			-- the game shows damage x10 compared to the internal value
-			local scaled = dmg * 10
-			wpn.damage = wpn.damage + scaled
-			wpn.last_hit = scaled
+		seen_hits[attack_data] = true
+		local wpn = self:get_weapon(id)
+		-- the game shows damage x10 compared to the internal value
+		local scaled = dmg * 10
+		wpn.damage = wpn.damage + scaled
+		wpn.last_hit = scaled
 
-			-- damage on the current enemy; starts over when a different enemy is hit
-			local ok_key, key = pcall(function() return tostring(victim:key()) end)
-			if ok_key and key then
-				local values = self.values
-				if values.target_key ~= key then
-					values.target_key = key
-					values.target_damage = 0
-				end
-				values.target_damage = values.target_damage + scaled
+		-- damage on the current enemy; starts over when a different enemy is hit
+		if victim and alive(victim) then
+			local key = tostring(victim:key())
+			local values = self.values
+			if values.target_key ~= key then
+				values.target_key = key
+				values.target_damage = 0
 			end
-			if self.update_table then
-				self:update_table()
-			end
-		end)
+			values.target_damage = values.target_damage + scaled
+		end
+		if self.update_table then
+			self:update_table()
+		end
 	end
 
 	function MissedShotsTracker:record_kill(data)
 		if not data or data.variant == "melee" then return end
 		local id = self:weapon_id(data)
 		if not id or not (tweak_data.weapon and tweak_data.weapon[id]) then return end
-		self:get_weapon(id).kills = self:get_weapon(id).kills + 1
+		local wpn = self:get_weapon(id)
+		wpn.kills = wpn.kills + 1
 		if self.update_table then
 			self:update_table()
 		end
 	end
 
-    function MissedShotsTracker:Load()
+	function MissedShotsTracker:Load()
 		local save_data
 		if io.file_is_readable(self._data_path) then
 			save_data = io.load_as_json(self._data_path)
@@ -342,24 +317,24 @@ if not MissedShotsTracker then
 		if not self.font_packs[self.settings.font_pack] then self.settings.font_pack = 1 end
 		if not self.font_variants[self.settings.font_variant] then self.settings.font_variant = 1 end
 		if not self.text_colors[self.settings.text_color] then self.settings.text_color = 1 end
-    end
-    
-    function MissedShotsTracker:Save()
-        local file = io.open(self._data_path, "w+")
-        if file then
-			file:write(json.encode(self.settings))
-            file:close()
-        end
-    end
+	end
 
-    Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_missed_shots_tracker", function(loc)
+	function MissedShotsTracker:Save()
+		local file = io.open(self._data_path, "w+")
+		if file then
+			file:write(json.encode(self.settings))
+			file:close()
+		end
+	end
+
+	Hooks:Add("LocalizationManagerPostInit", "LocalizationManagerPostInit_missed_shots_tracker", function(loc)
 		loc:load_localization_file(MissedShotsTracker._path .. "loc/english.json")
 	end)
 
 	Hooks:Add("MenuManagerOnOpenMenu", "MenuManagerOnOpenMenu_missed_shots_tracker", function()
 		MissedShotsTracker:get_font()
 	end)
-    
+
 end
 
 MissedShotsTracker:Load()

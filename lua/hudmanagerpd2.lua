@@ -8,12 +8,6 @@ local COLUMNS = {
 
 local DAMAGE_TITLES = { "Damage", "Hit", "Enemy" }
 
-local function with_commas(n)
-	local s = tostring(math.floor(n + 0.5))
-	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return (out:gsub("^,", ""))
-end
-
 -- Fully saturated colour for a hue in 0..1 (used by the rainbow mode).
 local function hue_color(h)
 	h = (h % 1) * 6
@@ -79,7 +73,6 @@ function MissedShotsTracker:set_shots(amount)
 	self:update_table()
 end
 
--- Lays out the "Shots missed" line, the per-weapon table and their backgrounds.
 function MissedShotsTracker:update_table()
 	if not alive(self.text) then return end
 
@@ -93,7 +86,6 @@ function MissedShotsTracker:update_table()
 
 	self.text:set_visible(show_counter)
 
-	-- background behind the "Shots missed" line
 	if alive(self.bg_text) then
 		local _, _, w, h = self.text:text_rect()
 		self.bg_text:set_alpha(alpha)
@@ -127,7 +119,9 @@ function MissedShotsTracker:update_table()
 		elseif mode == 3 then
 			dmg = values.target_damage or 0
 		end
-		table.insert(lines.damage, with_commas(dmg))
+		local s = tostring(math.floor(dmg + 0.5))
+		local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+		table.insert(lines.damage, (out:gsub("^,", "")))
 		table.insert(lines.shots, string.format("%d/%d", wpn.hits, wpn.shots))
 		table.insert(lines.acc, wpn.shots > 0 and string.format("%.2f%%", wpn.hits / wpn.shots * 100) or "-")
 	end
@@ -161,7 +155,6 @@ function MissedShotsTracker:update_table()
 	end
 end
 
--- Applies the selected text colour; rainbow cycles through hues over time.
 function MissedShotsTracker:apply_color()
 	if not alive(self.text) then return end
 	local entry = self.text_colors[self.settings.text_color] or self.text_colors[1]
@@ -191,7 +184,6 @@ function MissedShotsTracker:apply_color()
 	end
 end
 
--- Re-applies font, size and position to every text object.
 function MissedShotsTracker:apply_style()
 	local settings = self.settings
 	if not alive(self.text) then return end
